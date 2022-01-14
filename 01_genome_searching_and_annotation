@@ -1,0 +1,65 @@
+###############################genome searching
+#genome download
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/834/535/GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna.gz
+nohup wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/834/535/GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff.gz
+#decompress
+gzip -d -k GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna.gz
+#split the fasta file, keep only the chromosomes
+grep -n ">" GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna
+split -l 25457259 GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna camel_genome.fna
+#delete the redundant names to avoid " " exist in sequence names
+sed 's/\.1.*//g' camel_genome.fnaaa > camel_genome.fna
+sed -i '$d' camel_genome.fna
+#run MISA to search for SSR
+nohup perl5.26.1 misa.pl camel_genome.fna &
+#delete complicated SSR
+awk 'NR>1&&$3!~/c/' camel_genome.fna.misa > genome_perfect.fna.misa
+#count SSR number
+awk 'END{print NR}' camel_genome_perfect.fna.misa 
+#213711
+#annotation
+grep -n -C 10 "ID=NW_022587699.1:1..122917;Dbxref=taxon:419612;Name=Unknown;chromosome=Unknown;country=Mongolia;gbkey=Src;genome=genomic;isolate=YT-003-E;mol_type=genomic DNA;sex=male;tissue-type=ear skin" GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff
+1605904
+split -l 1605903 GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff camel_genome.gff
+mv camel_genome.gffaa camel_genome.gff
+awk '$3 == "region"' camel_genome.gff
+awk '$3 == "gene"' camel_genome_gene.gff
+sed 's/;/\t/g' camel_genome_gene.gff | awk '{split($11,a,"=");split($1,b,".");print b[1]"\t"$4"\t"$5"\t"a[2]}' > camel_genome_gene.bed
+nohup awk 'FNR==NR{a[$1"_"$2]=$1;b[$1"_"$2]=$2;c[$1"_"$2]=$3;d[$1"_"$2]=$4}FNR<NR{for(i in a){if(a[i]==$1&&b[i]<=$6&&c[i]>=$7)print $1"_"$2"\t"d[i]}}' camel_genome_gene.bed camel_genome_perfect.fna.misa > SSR_gene_annotation.txt &
+sed 's/;/\t/g' camel_genome.gff > camel_genome.gff.9split
+awk '{a[$3]++}END{for(i in a)print i"\t"a[i]}' camel_genome.gff
+mRNA	54306
+Camelus	1
+rRNA	3
+C_gene_segment	20
+exon	806655
+region	37
+V_gene_segment	59
+lnc_RNA	10526
+CDS	666974
+gene	30812
+cDNA_match	27271
+pseudogene	2310
+transcript	3609
+tRNA	1858
+snoRNA	566
+annotwriter	1
+guide_RNA	27
+snRNA	790
+awk 'BEGIN{FS=OFS="\t"} $3=="gene"{split($9, a, ";"); for(i in a){split(a[i], b, "="); if(++c[b[1]]==1) print b[1]}}' GCF_000001405.33_GRCh38.p7_genomic.gff
+
+
+#########注释
+awk 'BEGIN{FS=OFS="\t"}$3=="gene"{print $0}' GCF_000001405.33_GRCh38.p7_genomic.gff | sed 's/;/\t/g' | awk 'BEGIN{FS=OFS="\t"} {for(i=1; i<=NF; i++){split($i, a, "=");b[a[1]]=a[2]}} {print b["Name"],b["Dbxref"],b["gene_biotype"],b["deion"]} {split("", b, ":")}'
+
+
+#晚上去做注释
+先把谁是外显子内含子注释出来
+是gene再注释功能
+bedtools intersect -a perfectssr_150cut.bed -b GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff.bed -loj | bedtools groupby -i - -g 1-3 -c 7 -o collapse > perfectssr_150cut_annotated.txt
+
+
+awk '{a[$3]=$3}END{for(i in a)print a[i]}' GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff
+
+
+awk '{if($4~/tRNA/){print $0"\tt_RNA"}else if($4~/lnc_RNA/){print $0"\tlnc_RNA"}else if($4~/exon/||$4~/CDS/){print $0"\texon"}else if($4~/transcript/||$4~/mRNA/||$4~/gene/){print $0"\tintron"}else{print $0"\tintergenic_region"}}' perfectssr_150cut_annotated.txt > perfectssr_150cut_annotated_simp.txt
