@@ -1,0 +1,86 @@
+#the port 22 has installed adaptorremoval
+ssh -p 22 menghe@202.120.41.109
+cd ~/rexhan/Bei-rex/0_manuscript
+ls -l
+total 146624
+-rw-rw-r-- 1 menghe menghe    21886 1月  13 13:36 barcode720.txt
+-rw-rw-r-- 1 menghe menghe 72076132 1月  13 13:32 B_FDDP210265839-1a_1.clean.fq.gz
+-rw-rw-r-- 1 menghe menghe 77842459 1月  13 13:32 B_FDDP210265839-1a_2.clean.fq.gz
+-rw-rw-r-- 1 menghe menghe     5908 1月  13 13:33 comb-demux-bei.sh
+-rw-rw-r-- 1 menghe menghe      159 1月  13 13:46 misa.ini
+-rw-rw-r-- 1 menghe menghe    20148 1月  13 13:44 misa.pl
+
+sh comb-demux-bei.sh
+
+#comb-demux-bei.sh
+#!/bin/sh
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate crispranalysis
+
+
+AdapterRemoval --file1 B_FDDP210265839-1a_1.clean.fq.gz --file2 B_FDDP210265839-1a_2.clean.fq.gz --barcode-list barcode720.txt --demultiplex-only --basename fwd
+
+AdapterRemoval --file1 fwd.unidentified_2.fastq --file2 fwd.unidentified_1.fastq --barcode-list barcode720.txt --demultiplex-only --basename rev
+
+
+
+for i in 2A_21 2A_22 2A_23 2A_24 2A_25 2A_26 2B_21 2B_22 2B_23 2B_24 2B_25 2B_26 2C_21 2C_22 2C_23 2C_24 2C_25 2C_26 2D_21 2D_22 2D_23 2D_24 2D_25 2D_26 2E_21 2E_22 2E_23 2E_24 2E_25 2E_26 2F_21 2F_22 2F_23 2F_24 2F_25 2F_26 3A_31 3A_32 3A_33 3A_34 3A_35 3A_36 3B_31 3B_32 3B_33 3B_34 3B_35 3B_36 3C_31 3C_32 3C_33 3C_34 3C_35 3C_36 3D_31 3D_32 3D_33 3D_34 3D_35 3D_36 3E_31 3E_32 3E_33 3E_34 3E_35 3E_36 3F_31 3F_32 3F_33 3F_34 3F_35 3F_36 4A_41 4A_42 4A_43 4A_44 4A_45 4A_46 4B_41 4B_42 4B_43 4B_44 4B_45 4B_46 4C_41 4C_42 4C_43 4C_44 4C_45 4C_46 4D_41 4D_42 4D_43 4D_44 4D_45 4D_46 4E_41 4E_42 4E_43 4E_44 4E_45 4E_46 4F_41 4F_42 4F_43 4F_44 4F_45 4F_46 8A_81 8A_82 8A_83 8A_84 8A_85 8A_86 8B_81 8B_82 8B_83 8B_84 8B_85 8B_86 8C_81 8C_82 8C_83 8C_84 8C_85 8C_86 8D_81 8D_82 8D_83 8D_84 8D_85 8D_86 8E_81 8E_82 8E_83 8E_84 8E_85 8E_86 8F_81 8F_82 8F_83 8F_84 8F_85 8F_86 10A_101 10A_102 10A_103 10A_104 10A_105 10A_106 10B_101 10B_102 10B_103 10B_104 10B_105 10B_106 10C_101 10C_102 10C_103 10C_104 10C_105 10C_106 10D_101 10D_102 10D_103 10D_104 10D_105 10D_106 10E_101 10E_102 10E_103 10E_104 10E_105 10E_106 10F_101 10F_102 10F_103 10F_104 10F_105 10F_106 11A_111 11A_112 11A_113 11A_114 11A_115 11A_116 11B_111 11B_112 11B_113 11B_114 11B_115 11B_116 11C_111 11C_112 11C_113 11C_114 11C_115 11C_116 11D_111 11D_112 11D_113 11D_114 11D_115 11D_116 11E_111 11E_112 11E_113 11E_114 11E_115 11E_116 11F_111 11F_112 11F_113 11F_114 11F_115 11F_116 13A_131 13A_132 13A_133 13A_134 13A_135 13A_136 13B_131 13B_132 13B_133 13B_134 13B_135 13B_136 13C_131 13C_132 13C_133 13C_134 13C_135 13C_136 13D_131 13D_132 13D_133 13D_134 13D_135 13D_136 13E_131 13E_132 13E_133 13E_134 13E_135 13E_136 13F_131 13F_132 13F_133 13F_134 13F_135 13F_136 14A_141 14A_142 14A_143 14A_144 14A_145 14A_146 14B_141 14B_142 14B_143 14B_144 14B_145 14B_146 14C_141 14C_142 14C_143 14C_144 14C_145 14C_146 14D_141 14D_142 14D_143 14D_144 14D_145 14D_146 14E_141 14E_142 14E_143 14E_144 14E_145 14E_146 14F_141 14F_142 14F_143 14F_144 14F_145 14F_146 15A_151 15A_152 15A_153 15A_154 15A_155 15A_156 15B_151 15B_152 15B_153 15B_154 15B_155 15B_156 15C_151 15C_152 15C_153 15C_154 15C_155 15C_156 15D_151 15D_152 15D_153 15D_154 15D_155 15D_156 15E_151 15E_152 15E_153 15E_154 15E_155 15E_156 15F_151 15F_152 15F_153 15F_154 15F_155 15F_156 16A_161 16A_162 16A_163 16A_164 16A_165 16A_166 16B_161 16B_162 16B_163 16B_164 16B_165 16B_166 16C_161 16C_162 16C_163 16C_164 16C_165 16C_166 16D_161 16D_162 16D_163 16D_164 16D_165 16D_166 16E_161 16E_162 16E_163 16E_164 16E_165 16E_166 16F_161 16F_162 16F_163 16F_164 16F_165 16F_166 19A_191 19A_192 19A_193 19A_194 19A_195 19A_196 19B_191 19B_192 19B_193 19B_194 19B_195 19B_196 19C_191 19C_192 19C_193 19C_194 19C_195 19C_196 19D_191 19D_192 19D_193 19D_194 19D_195 19D_196 19E_191 19E_192 19E_193 19E_194 19E_195 19E_196 19F_191 19F_192 19F_193 19F_194 19F_195 19F_196 20A_201 20A_202 20A_203 20A_204 20A_205 20A_206 20B_201 20B_202 20B_203 20B_204 20B_205 20B_206 20C_201 20C_202 20C_203 20C_204 20C_205 20C_206 20D_201 20D_202 20D_203 20D_204 20D_205 20D_206 20E_201 20E_202 20E_203 20E_204 20E_205 20E_206 20F_201 20F_202 20F_203 20F_204 20F_205 20F_206 25A_251 25A_252 25A_253 25A_254 25A_255 25A_256 25B_251 25B_252 25B_253 25B_254 25B_255 25B_256 25C_251 25C_252 25C_253 25C_254 25C_255 25C_256 25D_251 25D_252 25D_253 25D_254 25D_255 25D_256 25E_251 25E_252 25E_253 25E_254 25E_255 25E_256 25F_251 25F_252 25F_253 25F_254 25F_255 25F_256 29A_291 29A_292 29A_293 29A_294 29A_295 29A_296 29B_291 29B_292 29B_293 29B_294 29B_295 29B_296 29C_291 29C_292 29C_293 29C_294 29C_295 29C_296 29D_291 29D_292 29D_293 29D_294 29D_295 29D_296 29E_291 29E_292 29E_293 29E_294 29E_295 29E_296 29F_291 29F_292 29F_293 29F_294 29F_295 29F_296 30A_301 30A_302 30A_303 30A_304 30A_305 30A_306 30B_301 30B_302 30B_303 30B_304 30B_305 30B_306 30C_301 30C_302 30C_303 30C_304 30C_305 30C_306 30D_301 30D_302 30D_303 30D_304 30D_305 30D_306 30E_301 30E_302 30E_303 30E_304 30E_305 30E_306 30F_301 30F_302 30F_303 30F_304 30F_305 30F_306 5A_51 5A_52 5A_53 5A_54 5A_55 5A_56 5B_51 5B_52 5B_53 5B_54 5B_55 5B_56 5C_51 5C_52 5C_53 5C_54 5C_55 5C_56 5D_51 5D_52 5D_53 5D_54 5D_55 5D_56 5E_51 5E_52 5E_53 5E_54 5E_55 5E_56 5F_51 5F_52 5F_53 5F_54 5F_55 5F_56 7A_71 7A_72 7A_73 7A_74 7A_75 7A_76 7B_71 7B_72 7B_73 7B_74 7B_75 7B_76 7C_71 7C_72 7C_73 7C_74 7C_75 7C_76 7D_71 7D_72 7D_73 7D_74 7D_75 7D_76 7E_71 7E_72 7E_73 7E_74 7E_75 7E_76 7F_71 7F_72 7F_73 7F_74 7F_75 7F_76 12A_121 12A_122 12A_123 12A_124 12A_125 12A_126 12B_121 12B_122 12B_123 12B_124 12B_125 12B_126 12C_121 12C_122 12C_123 12C_124 12C_125 12C_126 12D_121 12D_122 12D_123 12D_124 12D_125 12D_126 12E_121 12E_122 12E_123 12E_124 12E_125 12E_126 12F_121 12F_122 12F_123 12F_124 12F_125 12F_126 17A_171 17A_172 17A_173 17A_174 17A_175 17A_176 17B_171 17B_172 17B_173 17B_174 17B_175 17B_176 17C_171 17C_172 17C_173 17C_174 17C_175 17C_176 17D_171 17D_172 17D_173 17D_174 17D_175 17D_176 17E_171 17E_172 17E_173 17E_174 17E_175 17E_176 17F_171 17F_172 17F_173 17F_174 17F_175 17F_176 24A_241 24A_242 24A_243 24A_244 24A_245 24A_246 24B_241 24B_242 24B_243 24B_244 24B_245 24B_246 24C_241 24C_242 24C_243 24C_244 24C_245 24C_246 24D_241 24D_242 24D_243 24D_244 24D_245 24D_246 24E_241 24E_242 24E_243 24E_244 24E_245 24E_246 24F_241 24F_242 24F_243 24F_244 24F_245 24F_246;
+	do
+		for j in 1 2	
+			do
+				cat rev.$i.pair$j.fastq >> fwd.$i.pair$j.fastq
+				rm -f rev.$i.pair$j.fastq
+			done
+	done
+
+
+
+
+rm -f *.settings
+rm -f *unidentified*
+rm -f *rev*
+
+#results
+Read 720 barcodes / barcode pairs from 'barcode720.txt' ...
+Demultiplexing paired end reads ...
+Opening FASTQ file 'B_FDDP210265839-1a_1.clean.fq.gz', line numbers start at 1
+Opening FASTQ file 'B_FDDP210265839-1a_2.clean.fq.gz', line numbers start at 1
+Processed 1,001,378 reads in 6.1s; 164,000 reads per second ...
+
+WARNING: Number of available file-handles (ulimit -n) is too low.
+         AdapterRemoval will dynamically close/re-open files as required,
+         but performance may suffer as a result.
+
+Processed a total of 2,107,154 reads in 9.7s; 216,000 reads per second on average ...
+Read 720 barcodes / barcode pairs from 'barcode720.txt' ...
+Demultiplexing paired end reads ...
+Opening FASTQ file 'fwd.unidentified_2.fastq', line numbers start at 1
+Opening FASTQ file 'fwd.unidentified_1.fastq', line numbers start at 1
+Processed 1,001,006 reads in 4.1s; 241,000 reads per second ...
+
+WARNING: Number of available file-handles (ulimit -n) is too low.
+         AdapterRemoval will dynamically close/re-open files as required,
+         but performance may suffer as a result.
+
+Processed a total of 1,225,520 reads in 4.8s; 254,000 reads per second on average ...
+
+#misa.ini文件将 gff设置为false
+mkdir fastq_files
+mkdir fasta_files
+mkdir misa_output
+#fastq转fasta
+mv *.fastq fastq_files
+cd ~/rexhan/Bei-rex/0_manuscript/fastq_files
+for i in `ls`; do sed '/^@/!d;s/@/>/;N' $i > ${i/.fastq/}.fasta; mv ${i/.fastq/}.fasta ~/rexhan/Bei-rex/0_manuscript/fasta_files; done
+#misa找SSR
+cd ~/rexhan/Bei-rex/0_manuscript/fasta_files
+cp ~/rexhan/Bei-rex/0_manuscript/misa.pl ~/rexhan/Bei-rex/0_manuscript/fasta_files
+cp ~/rexhan/Bei-rex/0_manuscript/misa.ini ~/rexhan/Bei-rex/0_manuscript/fasta_files
+for i in `ls *.pair1.fasta`; do cat ${i} ${i/.pair1.fasta/}.pair2.fasta > ${i/.pair1.fasta/}.comb.fasta; done
+for i in `ls *.comb.fasta`; do perl5.22.1 misa.pl ${i}; cp *.statistics ~/rexhan/Bei-rex/0_manuscript/misa_output; done
+cd ~/rexhan/Bei-rex/0_manuscript/misa_output
+#合并有效信息
+for i in `ls *.comb.fasta.statistics`; do grep "Sequence source file" $i > ${i/.comb.fasta.statistics/}.ssr.count; grep -A 20 "Frequency of classified" $i >> ${i/.comb.fasta.statistics/}.ssr.count; done
+rm -f *.statistics
+cat *.ssr.count > ssr.count.txt
+mv ssr.count.txt ~/rexhan/Bei-rex/0_manuscript
