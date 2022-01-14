@@ -1,0 +1,31 @@
+genome searching
+#genome download
+wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/834/535/GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna.gz
+nohup wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/009/834/535/GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff.gz
+#decompress
+gzip -d -k GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna.gz
+#split the fasta file, keep only the chromosomes
+grep -n ">" GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna
+split -l 25457259 GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.fna camel_genome.fna
+#delete the redundant names to avoid " " exist in sequence names
+sed 's/\.1.*//g' camel_genome.fnaaa > camel_genome.fna
+sed -i '$d' camel_genome.fna
+#run MISA to search for SSR
+nohup perl5.26.1 misa.pl camel_genome.fna &
+#delete complicated SSR
+awk 'NR>1&&$3!~/c/' camel_genome.fna.misa > genome_perfect.fna.misa
+#count SSR number
+awk 'END{print NR}' camel_genome_perfect.fna.misa 
+#213711
+#annotation
+grep -n -C 10 "ID=NW_022587699.1:1..122917;Dbxref=taxon:419612;Name=Unknown;chromosome=Unknown;country=Mongolia;gbkey=Src;genome=genomic;isolate=YT-003-E;mol_type=genomic DNA;sex=male;tissue-type=ear skin" GCF_009834535.1_BCGSAC_Cfer_1.0/GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff
+1605904
+split -l 1605903 GCF_009834535.1_BCGSAC_Cfer_1.0_genomic.gff camel_genome.gff
+mv camel_genome.gffaa camel_genome.gff
+awk '$3 == "region"' camel_genome.gff
+awk '$3 == "gene"' camel_genome_gene.gff
+sed 's/;/\t/g' camel_genome_gene.gff | awk '{split($11,a,"=");split($1,b,".");print b[1]"\t"$4"\t"$5"\t"a[2]}' > camel_genome_gene.bed
+nohup awk 'FNR==NR{a[$1"_"$2]=$1;b[$1"_"$2]=$2;c[$1"_"$2]=$3;d[$1"_"$2]=$4}FNR<NR{for(i in a){if(a[i]==$1&&b[i]<=$6&&c[i]>=$7)print $1"_"$2"\t"d[i]}}' camel_genome_gene.bed camel_genome_perfect.fna.misa > SSR_gene_annotation.txt &
+sed 's/;/\t/g' camel_genome.gff > camel_genome.gff.9split
+awk '{a[$3]++}END{for(i in a)print i"\t"a[i]}' camel_genome.gff
+awk 'BEGIN{FS=OFS="\t"} $3=="gene"{split($9, a, ";"); for(i in a){split(a[i], b, "="); if(++c[b[1]]==1) print b[1]}}' GCF_000001405.33_GRCh38.p7_genomic.gff
