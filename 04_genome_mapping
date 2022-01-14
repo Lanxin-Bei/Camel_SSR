@@ -1,0 +1,101 @@
+library(tidyverse)
+library(dplyr)
+library(data.table)
+options(scipen = 200)
+only <- read.table("/Users/beilanxin/OneDrive/01_ssr/R_codes/cluster_repseq_to_genome.blast.1v1.misa_merge.txt")
+multi <- read.table("/Users/beilanxin/OneDrive/01_ssr/R_codes/cluster_repseq_to_genome.blast.1vn.misa_merge.txt")
+colnames(only) <- c("Chromosome", "SSR_Order", "SSR_Type", "Unit_by_MISA", "Length", "MISA_Start", "MISA_End", "Cluster_Rep_Seq", "BLAST_Start", "Blast_End")
+colnames(multi) <- c("Chromosome", "SSR_Order", "SSR_Type", "Unit_by_MISA", "Length", "MISA_Start", "MISA_End", "Cluster_Rep_Seq", "BLAST_Start", "Blast_End")
+only <- mutate(only, SSR_ID = paste(Chromosome, SSR_Order, sep = "_"))
+multi <- mutate(multi, SSR_ID = paste(Chromosome, SSR_Order, sep = "_"))
+#为什么要merge以后再筛选呢，哈哈
+#都是因为复杂微卫星的存在导致一个cluster的唯一的blast结果对应到两个SSR位点，删掉
+only <- filter(only, !Cluster_Rep_Seq %in% only$Cluster_Rep_Seq[duplicated(only$Cluster_Rep_Sep)])
+#一对多原因：（1）一条cluster序列blast到基因组上两个位点；（2）复杂微卫星的存在导致一个cluster的唯一的blast结果对应到两个SSR位点。这两种情况都删掉
+multi <- filter(multi, !Cluster_Rep_Seq %in% multi$Cluster_Rep_Seq[duplicated(multi$Cluster_Rep_Seq)])
+cluster <- fread("/Users/beilanxin/OneDrive/01_ssr/R_codes/cluster_result_representative.txt", sep = "\t", header = T)
+cluster <- cluster[ , c(1, 2, 4, 5, 6, 7, 8)]
+colnames(cluster) <- c("SSLP", "Cluster_ID", "Cluster_Rep_Seq", "Cluster_SSR_nr", "Unit_by_Seq", "Cluster__Core_Length", "Cluster_Seq")
+any(duplicated(cluster))
+#[1] FALSE
+all(multi$Cluster_Rep_Seq %in% cluster$Cluster_Rep_Seq)
+#[1] TRUE
+all(only$Cluster_Rep_Seq %in% cluster$Cluster_Rep_Seq)
+#[1] TRUE
+multi_merge_cluster <- merge(multi, cluster, by = "Cluster_Rep_Seq", all.x = T, all.y = F)
+only_merge_cluster <- merge(only, cluster, by = "Cluster_Rep_Seq", all.x = T, all.y = F)
+dim(multi)
+#[1] 204  11
+dim(multi_merge_cluster)
+#[1] 237  17
+dim(only)
+#[1] 60595    11
+dim(only_merge_cluster)
+#[1] 63232    17
+any(duplicated(multi_merge_cluster))
+#[1] FALSE
+any(duplicated(only_merge_cluster))
+#[1] FALSE
+any(multi_merge_cluster$id %in% only_merge_cluster$id)
+#[1] FALSE
+processing_0 <- rbind(multi_merge_cluster, only_merge_cluster) %>% arrange(Cluster_ID)
+#开始去重
+#（1）对一个cluster中有两个以上SSR的类型下手（全部删掉）
+processing_1 <- filter(processing_0, !Cluster_Rep_Seq %in% filter(processing_0, Cluster_SSR_nr != 1)$Cluster_Rep_Seq)
+#对一个cluster中没找出两个SSR但对应两个MISA位点的情况下手（全部删掉）
+processing_2 <-  filter(processing_1, !Cluster_ID %in% processing_1[duplicated(processing_1$Cluster_ID), ]$Cluster_ID)
+#（2）对一个ssr对应多个cluster的情况下手
+#暴力删掉聚成很多类的cluster，保留其中SSLP最大的
+#选出SSLP最大的（有简单的方法为什么要写循环嘞）
+processing_3 <- processing_2 %>% arrange(desc(SSLP)) %>% arrange(SSR_ID)
+processing_4 <- processing_3[!duplicated(processing_3$SSR_ID), ]
+dim(processing_4)
+#[1] 37874    17
+any(duplicated(processing_4$Cluster_ID))
+#[1] FALSE
+any(duplicated(processing_4$Cluster_Rep_Seq))
+#[1] FALSE
+any(duplicated(processing_4$SSR_ID))
+#[1] FALSE
+CLUSTER <- processing_4
+#CLUSTER的重复数据筛选完成
+#把misa总的结果整合上
+misa <- read.table("/Users/beilanxin/OneDrive/01_ssr/R_codes/camel_genome_perfect.fna.misa")
+colnames(misa) <- c("Chromosome", "SSR_Order", "SSR_Type", "Unit_by_MISA", "Length", "MISA_Start", "MISA_End")
+misa <- mutate(misa, SSR_ID = paste(Chromosome, SSR_Order, sep = "_"))
+CLUSTERpMISA <- merge(misa, CLUSTER, by = "SSR_ID", all = T)
+dim(misa)
+#[1] 213711      8
+dim(CLUSTERpMISA)
+#[1] 213711     24
+#把引物信息整合
+primers <- read.table("SSR_primers_specific_match.txt", header = F, sep = "\t")
+CLUSTERpMISA$Primer_ID <- paste(CLUSTERpMISA$Chromosome, ":", as.character(CLUSTERpMISA$MISA_Start-150), "-", as.character(CLUSTERpMISA$MISA_End+150), sep = "")
+colnames(primers_only) <- c("Primer_ID", "F_Primer_Start", "R_Primer_End")
+primers$V1 <- substr(primers$V2, 1, nchar(primers$V2)-2)
+primers <- primers[ , -c(2, 4)]
+colnames(primers) <- c("Primer_ID", "F_Primer_Start", "R_Primer_End")
+primers_seq <- read.table("SSR_primers.txt", header = T, sep = "\t")
+colnames(primers_seq) <- c("Primer_ID", "F_Primer_ID", "F_Primer_Seq", "R_Primer_ID", "R_Primer_Seq")
+primers_with_seq <- merge(primers, primers_seq, by = "Primer_ID", all.x = T, all.y = F)
+CLUSTERpMISApPRIMER <- merge(CLUSTERpMISA, primers_with_seq, by = "Primer_ID", all.x = T, all.y = F) %>% arrange(SSR_Order) %>% arrange(Chromosome)
+#确认misa结果都在在引物blast结果之间
+which((((as.numeric(CLUSTERpMISApPRIMER$MISA_Start) -20) < as.numeric(CLUSTERpMISApPRIMER$F_Primer_Start)) | (as.numeric(CLUSTERpMISApPRIMER$MISA_End + 20) > as.numeric(CLUSTERpMISApPRIMER$R_Primer_End))) == T)
+which((((as.numeric(CLUSTERpMISApPRIMER$MISA_Start) -20) < as.numeric(CLUSTERpMISApPRIMER$F_Primer_Start)) & (as.numeric(CLUSTERpMISApPRIMER$MISA_End + 20) > as.numeric(CLUSTERpMISApPRIMER$R_Primer_End))) == T)
+#进一步完善表格
+CLUSTERpMISApPRIMER$Chromosome_ID <- factor(as.numeric(substr(CLUSTERpMISApPRIMER$Chromosome, 7, 9))-695, levels = 1:37)
+CLUSTERpMISApPRIMER$Chromosome_ID <- gsub(37, "X", CLUSTERpMISApPRIMER$Chromosome_ID)
+CLUSTERpMISApPRIMER$Chromosome_ID <- factor(CLUSTERpMISApPRIMER$Chromosome_ID, levels = c(1:36, "X"))
+CLUSTERpMISApPRIMER$Unit <- str_extract(CLUSTERpMISApPRIMER$Unit_by_MISA,"(?<=\\().+?(?=\\))")
+for(i in 1:nrow(CLUSTERpMISApPRIMER)){
+  if(CLUSTERpMISApPRIMER$Unit[i] %in% c("AC", "CA", "GT", "TG")){
+    CLUSTERpMISApPRIMER$Unit_2N[i] <- "AC"
+  }else if(CLUSTERpMISApPRIMER$Unit[i] %in% c("AG", "GA", "CT", "TC")){
+    CLUSTERpMISApPRIMER$Unit_2N[i] <- "AG"
+  }else if(CLUSTERpMISApPRIMER$Unit[i] %in% c("AT", "TA")){
+    CLUSTERpMISApPRIMER$Unit_2N[i] <- "AT"
+  }else if(CLUSTERpMISApPRIMER$Unit[i] %in% c("CG", "GC")){
+    CLUSTERpMISApPRIMER$Unit_2N[i] <- "CG"
+  }else{CLUSTERpMISApPRIMER$Unit_2N[i] <- "Others"}
+}
+
