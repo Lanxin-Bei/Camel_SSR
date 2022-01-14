@@ -1,0 +1,25 @@
+#############富集测序所得微卫星位点基因组定位
+#由于屏蔽重复区后的序列信息量较低且比对到基因组上会分成数段，为准确匹配基因组，我们用每个cluster的代表序列比对基因组
+#提取出每个cluster ID的第一条序列
+awk '{if(a[$2]==""){print $4"\t"$2"\t"$1;a[$2]="Y"}}' cluster_result.xls > representative.list
+#也许一条序列可能聚到两个cluster里了？
+awk '{if(a[$2]==""){print $4;a[$2]="Y"}}' cluster_result.xls | sort | uniq > representative_uniq.id
+#把前后两个reads合并起来，生成fastq文件（公司未提供merge好的序列，且提供的参数不全）
+/home/haozhou/hechanner/soft/FLASH-1.2.11-Linux-x86_64/flash -r 251 -m 20 -x 0.25 -o SS SS_HQ_R1.fq.gz SS_HQ_R2.fq.gz 
+#从fastq文件构建fasta文件并对每个序列编号，和公司给的一致
+awk '{if(NR%4 == 1){print ">" substr($1, 2)"_"$2}}{if(NR%4 == 2){print}}' SS.extendedFrags.fastq > SS.extendedFrags.fasta
+#提取出代表序列的fasta
+perl /home/haozhou/hechanner/perl/extract_fasta.pl representative_uniq.id SS.extendedFrags.fasta > representative.fasta
+#代表序列的完整序列比对到基因组
+nohup blastn -query representative.fasta -out cluster_repseq_to_genome.blast -db camel_genome -outfmt 6 -evalue 1e-3 -num_descriptions 1 -num_threads 8 &
+#比对长度超299，比对上染色体、错配低于10的一对一匹配序
+nohup awk '{if($4>299 && $2~/NC_/ && $5<10){a[$1]++;b[$1]=$0}}END{for(i in a){if(a[i]==1){print b[i]}}}' cluster_repseq_to_genome.blast > cluster_repseq_to_genome.blast.1v1.txt &
+#比对长度超299，比对上染色体、错配低于10的一对一匹配序，找出一对多的行
+#去除空行并加一列行号$13
+nohup awk '{if($4>299 && $2~/NC_/ && $5<10){a[$1]++;b[$1]=$0"\n"b[$1]}}END{for(i in a){if(a[i]>1){print b[i]}}}' cluster_repseq_to_genome.blast | awk '$1 != ""{a++;print $0"\t"a}' > cluster_repseq_to_genome.blast.1vn.txt &
+#将测序一对一结果匹配到misa结果上（可能会存在一个cluster对应上多个misa位点）
+nohup awk 'FNR==NR{a[$1]=$2;if($9<$10){b[$1]=$9;c[$1]=$10}else{b[$1]=$10;c[$1]=$9}}FNR<NR{for(i in a){if(a[i]==$1 && $6>b[i] && $7<c[i]){print $0"\t"i"\t"b[i]"\t"c[i]}}}' cluster_repseq_to_genome.blast.1v1.txt camel_genome_perfect.fna.misa > cluster_repseq_to_genome.blast.1v1.misa_merge.txt &
+&#将测序一对多结果匹配到misa结果上
+nohup awk 'FNR==NR{a[$13]=$1;b[$13]=$2;if($9<$10){c[$13]=$9;d[$13]=$10}else{c[$13]=$10;d[$13]=$9}}FNR<NR{for(i in a){if(b[i]==$1 && $6>c[i]&&$7<d[i]){print $0"\t"a[i]"\t"c[i]"\t"d[i]}}}' cluster_repseq_to_genome.blast.1vn.txt camel_genome_perfect.fna.misa > cluster_repseq_to_genome.blast.1vn.misa_merge.txt &
+#把代表序列的信息提取出来
+awk 'FNR==NR{a[$1]=$1}FNR<NR{if($4 in a){print $0}}' representative_uniq.id cluster_result.xls > cluster_result_representative.txt
