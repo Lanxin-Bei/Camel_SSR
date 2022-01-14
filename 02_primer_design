@@ -1,0 +1,48 @@
+###############################primer design
+#提取前后150bp的序列
+cat camel_genome_perfect.fna.misa |awk '{print $1"\t"$6-150"\t"$7+150}' > SSR_chromosome_location.bed
+#生成每个SSR前后150bp的fasta文件
+bedtools getfasta -fi camel_genome.fna -bed SSR_chromosome_location.bed -fo SSR_fragment_location.fasta
+#调用misa脚本从这些短序列中寻找SSR，每条序列肯定都有唯一SSR
+perl5.26.1 misa.pl SSR_fragment_location.fasta
+#构建primer3输入文件
+perl p3_in.pl SSR_fragment_location.fasta.misa
+#download primer3
+~/beilanxin/01_manuscript$ wget https://sourceforge.net/projects/primer3/files/primer3/2.4.0/primer3-2.4.0.tar.gz
+#decompress
+tar -xzvf primer3-2.4.0.tar.gz
+#follow the instruction to install
+#run primer3, design primer for each locus
+nohup /home/haozhou/primer3-2.4.0/primer3/src/primer3_core --default_version=1 --output=SSR_fragment_location.fasta.p3out SSR_fragment_location.fasta.p3in &
+#构建引物设计输出表格
+nohup perl p3_out.pl SSR_fragment_location.fasta.p3out SSR_fragment_location.fasta.misa &
+#用primer3输出文件结果构建fasta文件
+awk '{printf ">"$1"_F\n"$8"\n>"$1"_R\n"$11"\n"}' SSR_fragment_location.fasta.results > SSR_primers.fasta
+#用primer3输出文件结果构建txt表格
+awk '{print $1"\t"$1"_F\t"$8"\t"$1"_R\t"$11}' SSR_fragment_location.fasta.results > SSR_primers.txt
+#用骆驼基因组构建blast库
+makeblastdb -in camel_genome.fna -dbtype nucl -out camel_genome
+#用WB_ssr_noc.primers.fasta比对到基因组上（跑了十几个小时）
+nohup blastn -query SSR_primers.fasta -out SSR_primers.blast -db camel_genome -outfmt 6 -evalue 1e-1 -num_threads 8 -word_size 7 -task blastn-short &
+#-rw-rw-r-- 1 beilanxin beilanxin 15204900385 1月  11 00:55 SSR_primers.blast
+#只保留从头匹配的匹配结果
+awk '$7==1' SSR_primers.blast > SSR_primers_selected.blast
+#-rw-rw-r-- 1 beilanxin beilanxin 12520651559 1月  11 08:29 SSR_primers_selected.blast
+#用于从引物blast基因组的结果中提取成对引物（这次还没跑，之前跑了二十个小时）
+nohup awk '{split($1,a,"-");b[a[1]"\t"$2]=b[a[1]"\t"$2]"\t"$1"+"$9}END{for(i in b){print i"\t"b[i]}}' SSR_primers_selected.blast | awk 'NF>3 && NF < 500' | awk '{for(i=3;i<NF+1;i++){split($i,d,"+");k[d[1]]++;}if(length(k)==2){print $0};delete d;delete k}' | awk '{for(i=3;i<NF+1;i++){if($i~/_F+/){split($i,a,"+");for(j=1;j<NF+1;j++){if($j~/_R+/){split($j,b,"+");if((b[2]-a[2]<1000 && b[2]-a[2]>0) || a[2]-b[2]>0 && a[2]-b[2]<1000){print $2"\t"$i"\t"$j}}}}}}' | sort | sed 's/+/\t/g' > SSR_primers_specific.txt &
+
+
+nohup head -400000 SSR_primers_selected.blast | awk '{split($1,a,"-");b[a[1]"\t"$2]=b[a[1]"\t"$2]"\t"$1"+"$9}END{for(i in b){print i"\t"b[i]}}' | awk 'NF>3 && NF < 500' | awk '{for(i=3;i<NF+1;i++){split($i,d,"+");k[d[1]]++;}if(length(k)==2){print $0};delete d;delete k}' | awk '{for(i=3;i<NF+1;i++){if($i~/_F+/){split($i,a,"+");for(j=1;j<NF+1;j++){if($j~/_R+/){split($j,b,"+");if((b[2]-a[2]<1000 && b[2]-a[2]>0) || a[2]-b[2]>0 && a[2]-b[2]<1000){print $2"\t"$i"\t"$j}}}}}}' | sort | sed 's/+/\t/g' > test2 &
+#-rw-rw-r-- 1 beilanxin beilanxin      305720 1月  11 08:31 test1
+
+nohup head -142771979 SSR_primers_selected.blast | awk '{split($1,a,"-");b[a[1]"\t"$2]=b[a[1]"\t"$2]"\t"$1"+"$9}END{for(i in b){print i"\t"b[i]}}' | awk 'NF>3 && NF < 500' | awk '{for(i=3;i<NF+1;i++){split($i,d,"+");k[d[1]]++;}if(length(k)==2){print $0};delete d;delete k}' | awk '{for(i=3;i<NF+1;i++){if($i~/_F+/){split($i,a,"+");for(j=1;j<NF+1;j++){if($j~/_R+/){split($j,b,"+");if((b[2]-a[2]<1000 && b[2]-a[2]>0) || a[2]-b[2]>0 && a[2]-b[2]<1000){print $2"\t"$i"\t"$j}}}}}}' | sort | sed 's/+/\t/g' > test3 &
+
+nohup awk '{split($1,a,"-");b[a[1]"\t"$2]=b[a[1]"\t"$2]"\t"$1"+"$9}END{for(i in b){print i"\t"b[i]}}' SSR_primers_selected.blast | awk 'NF>3 && NF < 500' | awk '{for(i=3;i<NF+1;i++){split($i,d,"+");k[d[1]]++;}if(length(k)==2){print $0};delete d;delete k}' | awk '{for(i=3;i<NF+1;i++){if($i~/_F+/){split($i,a,"+");for(j=1;j<NF+1;j++){if($j~/_R+/){split($j,b,"+");if((b[2]-a[2]<1000 && b[2]-a[2]>0) || a[2]-b[2]>0 && a[2]-b[2]<1000){print $2"\t"$i"\t"$j}}}}}}' | sort | sed 's/+/\t/g' > test4 &
+
+awk '{split($1,a,"-");b[a[1]"\t"$2]=b[a[1]"\t"$2]"\t"$1"+"$9}END{for(i in b){print i"\t"b[i]}}' SSR_primers_selected.blast | awk 'NF>3 && NF < 500' | awk '{for(i=3;i<NF+1;i++){split($i,d,"+");k[d[1]]++;}if(length(k)==2){print $0};delete d;delete k}' | awk '{for(i=3;i<NF+1;i++){if($i~/_F+/){split($i,a,"+");for(j=1;j<NF+1;j++){if($j~/_R+/){split($j,b,"+");if((b[2]-a[2]<1000 && b[2]-a[2]>0) || a[2]-b[2]>0 && a[2]-b[2]<1000){print $2"\t"$i"\t"$j}}}}}}' | sort | sed 's/+/\t/g' > SSR_primers_specific.txt &
+#存在的两种问题
+#1. 染色体不匹配的不会被删掉
+#2. 一个染色体如果有多个扩增也不会被删掉
+#解决问题
+awk '{a[$2]++;b[$2]=$0}END{for(i in a){if (a[i]==1)print b[i]}}' SSR_primers_specific.txt | awk  '{a[$2"\t"$3]=$0;d[$2"\t"$3]=$2;split($2,c,":");if(c[1]!=$1){b[$2]=$2}}END{for(i in d){if(d[i] in b){}else{print a[i]}}}' | sort > SSR_primers_specific_match.txt
+#然后在R里面merge
