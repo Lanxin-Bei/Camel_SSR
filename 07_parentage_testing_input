@@ -1,0 +1,57 @@
+#find the dominant ssr count
+library(dplyr)
+path <- "/Users/beilanxin/OneDrive/01_ssr/R_codes/misa_output"
+fileNames <- dir(path) 
+filePath <- sapply(fileNames, function(x){ 
+  paste(path,x,sep='/')})   
+data <- lapply(filePath, function(x){
+  read.table( x, header = FALSE, sep = "\t", fill = TRUE, blank.lines.skip = T)})
+count_output <-  as.data.frame(matrix(NA, ncol = 9, nrow = 720))
+for (i in 1:length(fileNames)){
+  table1<-data[[i]]
+  if (nrow(table1) <= 4){
+    vector_output <- c("null", rep(0, 8))
+  }else{
+    table2 <- t(table1)
+    colnames(table2) <- c(table2[1, ])
+    table2 <- table2[-1, ]
+    table2 <- table2[-nrow(table2), ]
+    table2 <- as.data.frame(table2)
+    table2 <- table2[ , c(-1, -2, -3)]
+    table2 <- as.data.frame(lapply(table2,as.numeric))
+    table2[is.na(table2)] <- 0
+    table2 <- table2[ , !nchar(colnames(table2)) == 3]
+    if (ncol(table2) == 2){
+      index <- 2
+    }else{
+      index <- which(as.vector(colSums(table2[ , -1])) == max(colSums(table2[ , -1]))) + 1
+    }
+    table3 <- table2[ , c(1, index)]
+    table4 <- arrange(table3, desc(table3[ , 2]))[ c(1:4), ]
+    vector_output <- c(colnames(table4)[2], table4[ , 1], table4[ , 2])
+  }
+  count_output[ i, ] <- vector_output
+}
+count_output$sample <- fileNames
+write.csv(count_output, "ssr_count.csv")
+
+
+
+
+
+
+
+summary(count_output)
+for (i in 6:9){ count_output[ , i] <- as.numeric(count_output[ , i])}
+summary(count_output)
+count_output <- mutate(count_output, ratio = V6 / V7) %>% mutate( heterozygote = ratio <= 2)
+?mutate()
+library(data.table)
+?fread()
+genotype <- fread("/Users/beilanxin/OneDrive/ssr/parentage testing calculation/genotype_file_threshold=3.csv", sep = ",", header = T)
+row.names(genotype) <- genotype$camel_No.
+genotype <- genotype[ , -1]
+?hclust()
+hc = hclust(dist(genotype), method = "average")
+plot(hc)
+rowna
